@@ -1,0 +1,50 @@
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+def run_classification_pipeline():
+    # 1. Input: Load the Iris Benchmark Dataset
+    iris = load_iris()
+    X, y = iris.data, iris.target
+    
+    print("=" * 60)
+    print("DECODELABS AI - PROJECT 2: DATA CLASSIFICATION INITIALIZED")
+    print(f"Dataset Loaded | Samples: {X.shape[0]}, Features: {X.shape[1]}, Classes: {len(iris.target_names)}")
+    print("=" * 60)
+
+    # 2. Structural Integrity: Train-Test Split (80% Training, 20% Testing)
+    # Shuffle ensures elimination of order bias
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.20, random_state=42, shuffle=True
+    )
+
+    # 3. The Gatekeeper Rule: Feature Scaling (StandardScaler: Mean = 0, Variance = 1)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # 4. The Algorithm: Instantiate K-Nearest Neighbors (K=5)
+    model = KNeighborsClassifier(n_neighbors=5)
+
+    # 5. Process: Fit the model (Memorize the map)
+    model.fit(X_train_scaled, y_train)
+
+    # 6. Output Prediction: Apply logic on test data
+    predictions = model.predict(X_test_scaled)
+
+    # 7. Output Validation: Diagnostic tools (Confusion Matrix & Metrics)
+    accuracy = accuracy_score(y_test, predictions)
+    conf_matrix = confusion_matrix(y_test, predictions)
+    report = classification_report(y_test, predictions, target_names=iris.target_names)
+
+    print(f"\nModel Accuracy: {accuracy * 100:.2f}%\n")
+    print("Confusion Matrix:")
+    print(conf_matrix)
+    print("\nClassification Report:")
+    print(report)
+    print("=" * 60)
+
+if __name__ == "__main__":
+    run_classification_pipeline()
