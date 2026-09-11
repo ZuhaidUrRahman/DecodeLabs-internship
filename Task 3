@@ -1,0 +1,92 @@
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# ---------------------------------------------------------
+# SETUP: Loading dataset from your specific file path
+# ---------------------------------------------------------
+file_path = r'D:\Decode Labs Project\raw_skills.csv'
+
+try:
+    df = pd.read_csv(file_path)
+    print(f"Successfully loaded dataset from: {file_path}")
+except FileNotFoundError:
+    print(f"Error: Could not find the file at {file_path}. Please check if 'raw_skills.csv' is saved in that folder.")
+    # Fallback mock dataset so the script doesn't crash if the file isn't created yet
+    data = {
+        'job_role': ['DevOps Engineer', 'Data Scientist', 'Backend Developer'],
+        'skills': [
+            'Python Docker Kubernetes AWS CI/CD automation cloud',
+            'Python SQL Machine Learning Data Analysis statistics algorithms',
+            'Java Python SQL APIs databases microservices spring'
+        ]
+    }
+    df = pd.DataFrame(data)
+
+def recommend_tech_stack(user_inputs, top_n=3):
+    """
+    Executes the recommendation pipeline:
+    1. Ingestion of user inputs
+    2. Vectorization & Scoring via TF-IDF and Cosine Similarity
+    3. Sorting by relevance score
+    4. Filtering for Top-N results
+    """
+    # Combine the user's input list into a single query string
+    user_query = " ".join(user_inputs)
+    
+    # Combine dataset skills and user query for joint vectorization vocabulary space
+    corpus = list(df['skills']) + [user_query]
+    
+    # Initialize TF-IDF Vectorizer to weigh specific vs generic terms
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(corpus)
+    
+    # Separate user vector (last row) from item vectors (all preceding rows)
+    user_vector = tfidf_matrix[-1]
+    item_vectors = tfidf_matrix[:-1]
+    
+    # STEP 2: SCORING (Calculate Cosine Similarity)
+    similarity_scores = cosine_similarity(user_vector, item_vectors).flatten()
+    
+    # Create a working copy of the dataset with the calculated scores
+    df_scored = df.copy()
+    df_scored['similarity_score'] = similarity_scores
+    
+    # STEP 3: SORTING (Descending order of similarity)
+    df_sorted = df_scored.sort_values(by='similarity_score', ascending=False)
+    
+    # STEP 4: FILTERING (Truncating to Top-N to prevent choice overload)
+    top_recommendations = df_sorted.head(top_n)
+    
+    return top_recommendations
+
+# ---------------------------------------------------------
+# EXECUTION INTERFACE
+# ---------------------------------------------------------
+if __name__ == "__main__":
+    print("="*50)
+    print(" DECODELABS: AI TECH STACK RECOMMENDER (PROJECT 3) ")
+    print("="*50)
+    
+    # STEP 1: INGESTION (Capturing minimum 3 user inputs)
+    print("\nPlease enter 3 skills or career interests of your choice:")
+    input_1 = input("Skill 1 (e.g., Python): ")
+    input_2 = input("Skill 2 (e.g., Cloud): ")
+    input_3 = input("Skill 3 (e.g., Automation): ")
+    
+    user_skills = [input_1, input_2, input_3]
+    
+    print(f"\n[Ingestion Complete] Processing profile for: {user_skills}")
+    
+    # Generate recommendations (Top 3)
+    recommendations = recommend_tech_stack(user_skills, top_n=3)
+    
+    print("\n" + "-"*50)
+    print(" TOP 3 RECOMMENDED CAREER PATHS / TECH STACKS:")
+    print("-" * 50)
+    
+    for idx, row in recommendations.reset_index().iterrows():
+        match_percentage = row['similarity_score'] * 100
+        print(f"{idx + 1}. Role: {row['job_role']}")
+        print(f"   Match Confidence: {match_percentage:.2f}%")
+        print(f"   Associated Skills: {row['skills']}\n")
